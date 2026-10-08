@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customer Churn Prediction</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+    .container {
+      max-width: 850px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 18px;
+      padding: 30px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.08);
+    }
+    h1 { text-align: center; margin: 0 0 8px; }
+    .subtitle { text-align: center; color: #6b7280; margin-bottom: 28px; }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    label { font-weight: 600; display: block; margin-bottom: 7px; }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 9px;
+      font-size: 15px;
+    }
+    .full { grid-column: 1 / -1; }
+    button {
+      width: 100%;
+      margin-top: 22px;
+      padding: 14px;
+      border: 0;
+      border-radius: 10px;
+      background: #111827;
+      color: white;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    #result {
+      display: none;
+      margin-top: 25px;
+      padding: 22px;
+      border-radius: 12px;
+      background: #f3f4f6;
+    }
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 9px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .result-row:last-child { border-bottom: 0; }
+    .error { color: #b91c1c; font-weight: 600; }
+    @media (max-width: 650px) {
+      .grid { grid-template-columns: 1fr; }
+      .full { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Customer Churn Prediction</h1>
+      <div class="subtitle">AI-powered customer churn risk analysis</div>
+
+      <form id="churnForm">
+        <div class="grid">
+          <div>
+            <label>Customer ID</label>
+            <input id="customer_id" value="C001" required>
+          </div>
+
+          <div>
+            <label>Tenure (months)</label>
+            <input id="tenure" type="number" value="4" min="0" required>
+          </div>
+
+          <div>
+            <label>Monthly Charges</label>
+            <input id="monthly_charges" type="number" value="1200" min="0" step="0.01" required>
+          </div>
+
+          <div>
+            <label>Support Calls</label>
+            <input id="support_calls" type="number" value="5" min="0" required>
+          </div>
+
+          <div class="full">
+            <label>Contract</label>
+            <select id="contract">
+              <option>Month-to-month</option>
+              <option>One year</option>
+              <option>Two year</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="predictBtn" type="submit">Predict Churn</button>
+      </form>
+
+      <div id="result"></div>
+    </div>
+  </div>
+
+<script>
+const WEBHOOK_URL = "https://bhavya-garaga.app.n8n.cloud/webhook/474de2a1-d30c-4fec-9603-2bad567046e1";
+
+document.getElementById("churnForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  const button = document.getElementById("predictBtn");
+  const result = document.getElementById("result");
+
+  button.disabled = true;
+  button.textContent = "Analyzing...";
+  result.style.display = "block";
+  result.innerHTML = "Please wait...";
+
+  const body = {
+    customer_id: document.getElementById("customer_id").value,
+    tenure: Number(document.getElementById("tenure").value),
+    monthly_charges: Number(document.getElementById("monthly_charges").value),
+    support_calls: Number(document.getElementById("support_calls").value),
+    contract: document.getElementById("contract").value
+  };
+
+  try {
+    const response = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) throw new Error(data.message || "Request failed");
+
+    const output = data.output || data.text || JSON.stringify(data);
+
+    result.innerHTML = `
+      <h2>Churn Analysis</h2>
+      <div style="white-space:pre-wrap;line-height:1.6">${escapeHtml(String(output))}</div>
+    `;
+  } catch (error) {
+    result.innerHTML = `<div class="error">Error: ${escapeHtml(error.message)}</div>`;
+  } finally {
+    button.disabled = false;
+    button.textContent = "Predict Churn";
+  }
+});
+
+function escapeHtml(value) {
+  return value.replace(/[&<>"']/g, char => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;"
+  }[char]));
+}
+</script>
+</body>
+</html>
